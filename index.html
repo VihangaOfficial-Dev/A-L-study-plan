@@ -1,0 +1,2696 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elite Study Dashboard v9.7 | To-Do Edition</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        
+        :root {
+            --primary: #6366f1;
+            --sidebar-bg: #0f172a;
+            --bg-body: #f3f4f6;
+            --glass: rgba(255, 255, 255, 0.9);
+        }
+
+        [data-theme="dark"] {
+            --bg-body: #0b0f1a;
+            --sidebar-bg: #020617;
+            --glass: rgba(30, 41, 59, 0.8);
+            --text-main: #f1f5f9;
+        }
+
+        body { background-color: var(--bg-body); font-family: 'Inter', sans-serif; transition: 0.3s; color: var(--text-main); overflow-x: hidden; }
+
+        /* --- Welcome Splash Screen --- */
+        #welcome-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000000; display: flex; align-items: center; justify-content: center;
+            z-index: 10000; flex-direction: column; color: white; transition: 0.8s ease-in-out;
+        }
+        .welcome-loader {
+            width: 80px; height: 80px; border: 5px solid rgba(255,255,255,0.1);
+            border-top-color: #818cf8; border-radius: 50%; animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .welcome-text { font-size: 1.8rem; font-weight: 800; letter-spacing: 2px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        .sidebar { width: 260px; background: var(--sidebar-bg); height: 100vh; position: fixed; z-index: 1050; transition: 0.3s; left: 0; border-right: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-brand { padding: 30px 25px; font-weight: 800; font-size: 1.5rem; color: #818cf8; letter-spacing: -1px; }
+        .nav-link { color: #94a3b8; padding: 12px 25px; margin: 5px 15px; border-radius: 12px; transition: 0.2s; cursor: pointer; text-decoration: none; display: block; }
+        .nav-link.active { background: rgba(99, 102, 241, 0.15); color: #818cf8; font-weight: 600; }
+
+        .main-content { margin-left: 260px; padding: 40px; min-height: 100vh; transition: 0.3s; }
+
+        #sidebarOverlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1040;
+        }
+
+        @media (max-width: 992px) {
+            .sidebar { left: -260px; }
+            .sidebar.active { left: 0; box-shadow: 10px 0 30px rgba(0,0,0,0.3); }
+            .sidebar.active ~ #sidebarOverlay { display: block; }
+            .main-content { margin-left: 0; padding: 20px; }
+        }
+
+        .page-section { display: none; }
+        .page-section.active { display: block !important; animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .quote-card {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white; border-radius: 20px; padding: 25px; margin-bottom: 25px;
+            box-shadow: 0 10px 25px rgba(79, 70, 229, 0.2);
+        }
+
+        .glass-card { background: var(--glass); backdrop-filter: blur(10px); border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); padding: 25px; margin-bottom: 25px; }
+
+       /* --- Professional To-Do List Styles --- */
+.todo-container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.todo-item {
+    background: var(--glass);
+    border-radius: 16px;
+    padding: 15px 20px;
+    margin-bottom: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: slideUp 0.4s ease-out forwards;
+}
+
+.todo-item:hover {
+    transform: translateX(5px);
+    border-color: var(--primary);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Custom Checkbox */
+.todo-check {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid var(--primary);
+    margin-right: 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.3s;
+    flex-shrink: 0;
+}
+
+.todo-item.completed .todo-check {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+.todo-item.completed .todo-text {
+    text-decoration: line-through;
+    opacity: 0.5;
+}
+
+.todo-text {
+    flex-grow: 1;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.todo-input-group {
+    background: var(--glass);
+    border-radius: 50px;
+    padding: 8px 8px 8px 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    margin-bottom: 30px;
+    transition: 0.3s;
+}
+
+.todo-input-group:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
+}
+
+.todo-input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: rgb(0, 0, 0);
+    width: 100%;
+    padding: 10px 0;
+}
+
+.todo-add-btn {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.3s;
+}
+
+.todo-add-btn:hover {
+    transform: rotate(90deg) scale(1.1);
+}
+/* --- Tree Growth Animation --- */
+.tree-container {
+    font-size: 5rem;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.4));
+}
+
+.tree-stage {
+    animation: growIn 0.8s ease-out forwards;
+}
+
+@keyframes growIn {
+    0% { transform: scale(0); opacity: 0; }
+    60% { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+}
+        /* --- Ultra Professional Timer Styles --- */
+.timer-container {
+    position: relative;
+    width: 300px;
+    height: 300px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+}
+
+.timer-svg {
+    transform: rotate(-90deg);
+    width: 100%;
+    height: 100%;
+}
+
+.timer-svg circle {
+    fill: none;
+    stroke-width: 8;
+    stroke-linecap: round;
+}
+
+.timer-bg {
+    stroke: rgb(0, 0, 0);
+    
+}
+
+.timer-progress {
+    stroke: var(--primary);
+    stroke-dasharray: 880; /* Circle circumference */
+    stroke-dashoffset: 880;
+    transition: stroke-dashoffset 1s linear;
+    filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.6));
+}
+
+.timer-content {
+    position: absolute;
+    text-align: center;
+     font-family: 'Poppins', sans-serif;
+    
+}
+
+.timer-display {
+    font-size: 3.5rem;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--primary);
+    margin: 0;
+    line-height: 1;
+    
+}
+
+.timer-subtext {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #94a3b8;
+    margin-top: 5px;
+}
+
+.timer-btn-group {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 30px;
+}
+
+.btn-focus {
+    padding: 12px 40px;
+    border-radius: 50px;
+    font-weight: 700;
+    transition: 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+/* Master Log Table එක තවත් ලස්සන කරන්න */
+#masterLogTable {
+    border-collapse: separate !important;
+    border-spacing: 0 12px !important; /* Rows අතර ලස්සන පරතරයක් දෙනවා */
+    background: transparent;
+}
+
+#masterLogTable tbody tr {
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    border-radius: 15px; /* පේළි වල දෙපැත්ත වටකුරු කරනවා */
+    transition: all 0.3s ease-in-out;
+}
+
+#masterLogTable tbody tr:hover {
+    transform: translateY(-4px) scale(1.01); /* මවුස් එක ගෙනිච්චම පේළිය ඉස්සෙනවා */
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.637);
+    background: #103ba8; /* ලාවට නිල් පැහැයක් */
+}
+
+#masterLogTable td {
+    border: none !important; /* පේළි අතර තියෙන ඉරි අයින් කරනවා */
+    padding: 20px 15px !important;
+}
+
+#masterLogTable td:first-child {
+    border-radius: 15px 0 0 15px; /* වම් පැත්ත වටකුරු කිරීම */
+}
+
+#masterLogTable td:last-child {
+    border-radius: 0 15px 15px 0; /* දකුණු පැත්ත වටකුරු කිරීම */
+}
+        
+        .target-label { font-size: 1.1rem; color: #ef4444; font-weight: 700; margin-bottom: 5px; }
+        .stat-box { padding: 25px; border-radius: 18px; color: white; }
+        .menu-btn { display: none; background: white; border: none; padding: 10px 15px; border-radius: 10px; }
+        @media (max-width: 992px) { .menu-btn { display: block; } }
+
+        #successOverlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(8px);
+            z-index: 9999; align-items: center; justify-content: center;
+            text-align: center; color: white;
+        }
+        .pop-card {
+            background: white; color: #0f172a; padding: 40px; border-radius: 30px;
+            max-width: 450px; width: 90%; box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .cancel-link { display: none; margin-top: 15px; color: #94a3b8; font-size: 0.9rem; cursor: pointer; text-decoration: underline; border: none; background: none; }
+
+        /* --- Subject Balance Design --- */
+        .balance-item {
+            background: rgba(0, 0, 0, 0.02);
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 12px;
+            transition: 0.3s;
+        }
+        [data-theme="dark"] .balance-item { background: rgba(255, 255, 255, 0.03); }
+        
+        .progress { height: 10px !important; background: rgba(0,0,0,0.05) !important; border-radius: 20px; overflow: visible; }
+        [data-theme="dark"] .progress { background: rgba(255,255,255,0.05) !important; }
+        
+        .progress-bar { 
+            border-radius: 20px; 
+            position: relative; 
+            transition: 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .progress-bar::after {
+            content: ''; position: absolute; right: 0; top: 50%; transform: translate(50%, -50%);
+            width: 12px; height: 12px; background: inherit; border-radius: 50%; border: 2px solid white;
+        }
+        /* --- Advanced Gamification UI --- */
+.level-card {
+    background: linear-gradient(145deg, #1e1b4b 0%, #312e81 100%);
+    border: none;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(79, 70, 229, 0.3);
+}
+
+/* Background එකේ යන පොඩි light effect එකක් */
+.level-card::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(circle, rgba(129, 140, 248, 0.1) 0%, transparent 70%);
+    animation: rotate-bg 10s linear infinite;
+}
+
+@keyframes rotate-bg { to { transform: rotate(360deg); } }
+
+.level-badge-main {
+    width: 70px; height: 70px;
+    background: #4f46e5;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.8rem; font-weight: 900;
+    color: white;
+    border: 4px solid rgba(255,255,255,0.2);
+    box-shadow: 0 0 20px rgba(79, 70, 229, 0.6);
+    margin-bottom: 10px;
+}
+
+.xp-label { letter-spacing: 2px; font-size: 0.75rem; color: #a5b4fc; }
+
+.badge-slot {
+    width: 60px; height: 60px;
+    background: rgba(255,255,255,0.03);
+    border: 2px dashed rgba(255,255,255,0.1);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; color: rgba(255,255,255,0.2);
+    transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Badge එක Unlock වුණාම එන style එක */
+.badge-unlocked {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    color: white !important;
+    border: 2px solid #fff;
+    box-shadow: 0 5px 15px rgba(245, 158, 11, 0.4);
+    transform: scale(1.1) translateY(-5px);
+}
+/* --- Professional Notes UI --- */
+.note-card {
+    background: #fff;
+    border-radius: 15px;
+    padding: 18px;
+    border-left: 6px solid #ccc;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    transition: 0.3s;
+    position: relative;
+}
+[data-theme="dark"] .note-card { background: #1e293b; color: white; }
+
+.note-card:hover { transform: translateY(-5px); }
+
+.note-tag {
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: inline-block;
+}
+
+.note-ict { border-left-color: #3b82f6; }
+.tag-ict { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+
+.note-sft { border-left-color: #f59e0b; }
+.tag-sft { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+
+.note-et { border-left-color: #10b981; }
+.tag-et { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+
+.note-date { font-size: 0.75rem; color: #94a3b8; margin-top: 10px; display: block; }
+.editor-container {
+    border: 1px solid #e0e0e0;
+    overflow: hidden;
+    background: #fff;
+}
+
+.editor-toolbar {
+    background-color: #dde4dc !important;
+}
+
+#richNoteInput:empty:before {
+    content: attr(placeholder);
+    color: #adb5bd;
+}
+
+.note-card p {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+#editorWrapper.fullscreen-mode {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 2000;
+    margin: 0 !important;
+    border-radius: 0;
+    background: #fff;
+}
+
+#editorWrapper.fullscreen-mode #richNoteInput {
+    height: calc(100vh - 180px) !important;
+    overflow-y: auto;
+}
+
+#richNoteInput:empty:before {
+    content: attr(placeholder);
+    color: #adb5bd;
+}
+
+.note-card {
+    transition: transform 0.3s ease;
+    border: none;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+
+.note-card:hover {
+    transform: translateY(-5px);
+}
+/* Analytics Page Custom Styles */
+#analyticsPage {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.analytics-card {
+    border-radius: 20px !important;
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.analytics-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1) !important;
+}
+
+.gauge-value {
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-top: -20px;
+    color: #2d3436;
+    font-family: 'Poppins', sans-serif;
+}
+
+/* Chart containers වලට ලස්සන soft border එකක් */
+.chart-container {
+    width: 100%;
+    margin: 0 auto;
+}
+
+/* Animation for page entry */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* විෂය අනුව gradient පාටවල් (Optional colors) */
+#ictVal { color: #4facfe; }
+#sftVal { color: #f6d365; }
+#etVal { color: #667eea; }
+/* Icons වලට අදාළ Styling */
+.subject-icon {
+    width: 70px;
+    height: 70px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+}
+.form-check {
+    transition: 0.3s;
+    cursor: pointer;
+}
+.form-check:hover {
+    background-color: #e9ecef !important;
+    transform: translateX(5px);
+}
+.form-check-input:checked + .form-check-label {
+    text-decoration: line-through;
+    color: #28a745;
+}
+/* ICT Icon Color */
+.ict-bg {
+    background: rgba(79, 172, 254, 0.15);
+    color: #4facfe;
+    box-shadow: 0 10px 20px rgba(79, 172, 254, 0.1);
+}
+
+/* SFT Icon Color */
+.sft-bg {
+    background: rgba(246, 211, 101, 0.15);
+    color: #0c9200;
+    box-shadow: 0 10px 20px rgba(246, 211, 101, 0.1);
+}
+
+/* ET Icon Color */
+.et-bg {
+    background: rgba(102, 126, 234, 0.15);
+    color: #667eea;
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.1);
+}
+
+/* Hover කළාම Icon එක ලොකු වෙන්න */
+.analytics-card:hover .subject-icon {
+    transform: scale(1.15) rotate(-10deg);
+}
+
+.text-xs {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+.calendar-grid-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-weight: bold;
+    font-size: 12px;
+    padding-bottom: 15px;
+    opacity: 0.7;
+}
+/* 4x4 Grid එක */
+.calendar-grid-4x4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* පේළියකට දවස් 4 යි */
+    gap: 20px;
+    background: #f0f2f5;
+    padding: 20px;
+    border-radius: 15px;
+}
+
+/* දවසේ කොටුව ලොකු කිරීම */
+.calendar-day-big {
+    background: #fff;
+    border-radius: 15px;
+    min-height: 180px; /* උස වැඩි කළා වැඩ ටික ලොකුවට පේන්න */
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #e0e0e0;
+    transition: 0.3s;
+}
+
+.calendar-day-big:hover {
+    transform: scale(1.02);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+.day-header-big {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+}
+
+.date-circle {
+    width: 35px;
+    height: 35px;
+    background: #000;
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+/* වැඩ ලැයිස්තුව ලොකුවට */
+.task-list-big {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow-y: auto;
+}
+
+.task-item-big {
+    font-size: 12px;
+    font-weight: 600;
+    color: #2c3e50;
+    background: #f8f9fa;
+    padding: 5px 8px;
+    border-left: 4px solid #4facfe;
+    border-radius: 4px;
+}
+
+.today-highlight {
+    border: 3px solid #4facfe !important;
+}
+.calendar-grid-body {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 12px;
+}
+
+.calendar-day-box {
+    aspect-ratio: 1/1;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(0,0,0,0.05);
+    position: relative;
+}
+
+.calendar-day-box:hover {
+    transform: translateY(-5px);
+    background: white;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+}
+
+.progress-ring-container {
+    position: relative;
+    width: 50px;
+    height: 50px;
+}
+
+.day-number {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.goal-info {
+    font-size: 9px;
+    font-weight: bold;
+    margin-top: 4px;
+    color: #666;
+}
+
+.text-gradient {
+    background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.day-modal {
+    display: none; /* පටන් ගනිද්දී පේන්නේ නැහැ */
+    position: fixed;
+    z-index: 2000;
+    left: 0; top: 0; width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.5); /* පසුබිම අඳුරු කරන්න */
+    backdrop-filter: blur(5px);
+    align-items: center; justify-content: center;
+}
+
+.day-modal-content {
+    background: white;
+    padding: 25px;
+    border-radius: 20px;
+    width: 90%; max-width: 400px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.modal-task-item {
+    border-left: 4px solid #4facfe;
+    background: #f8f9fa;
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+}
+/* Calendar Container එක Professional කිරීම */
+.calendar-day-box {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px; /* වැඩියෙන් රවුම් කළා */
+    padding: 15px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.calendar-day-box:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--primary-color);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Progress Ring එක Modern කිරීම */
+.progress-ring-container {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.progress-ring-container svg {
+    transform: rotate(-90deg); /* උඩ ඉඳන් පටන් ගන්න */
+}
+/* Calendar Wrapper එක පිරිසිදු කිරීම */
+.calendar-wrapper {
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* දවස් වල නම් පේළිය (SUN, MON...) */
+.calendar-grid-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background: #000; /* කළු පාට Header එකක් */
+    color: #fff !important;
+    font-weight: 800;
+    font-size: 11px;
+    padding: 10px 0;
+    text-align: center;
+    letter-spacing: 1px;
+}
+.hours-badge {
+    background: rgba(0, 123, 255, 0.2); /* ලස්සන නිල් පාටක් */
+    color: #007bff;
+    font-size: 0.65rem;
+    font-weight: bold;
+    padding: 2px 5px;
+    border-radius: 10px;
+    margin-top: 5px;
+    text-align: center;
+    border: 1px solid rgba(0, 123, 255, 0.3);
+}
+
+/* Dark mode එකට ගැලපෙන්න */
+[data-theme="dark"] .hours-badge {
+    background: rgba(255, 255, 255, 0.1);
+    color: #00d4ff;
+}
+.calendar-grid-header div {
+    color: #fff !important; /* ඔක්කොම සුදු පාටින් */
+}
+
+/* Calendar Grid Body */
+.calendar-grid-body {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    border-left: 1px solid #eee;
+    border-top: 1px solid #eee;
+}
+
+/* හැම දිනයක්ම පෙට්ටියක් විදිහට සැකසීම */
+.calendar-day-box {
+    min-height: 110px; /* කොටු වල උස වැඩි කළා */
+    border-right: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+    padding: 10px;
+    background: #fff;
+    transition: background 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+}
+
+.calendar-day-box:hover {
+    background: #f9f9f9;
+}
+
+/* දවසේ අංකය (පින්තූරයේ වගේ Bold) */
+.day-num-modern {
+    font-size: 18px;
+    font-weight: 900;
+    color: #000;
+    margin-bottom: 8px;
+}
+
+/* Task List - එදා දවසේ කරපු වැඩ පෙන්වන කොටස */
+.mini-task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mini-task-item {
+    font-size: 9px;
+    font-weight: 600;
+    color: #27ae60; /* කොළ පාටින් Task එක */
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.mini-task-item::before {
+    content: '✔';
+    font-size: 8px;
+}
+
+/* අද දවස Highlight කිරීම */
+.day-today {
+    background: #fffdf0 !important; /* ලාවට කහ පාටක් */
+    box-shadow: inset 0 0 0 2px #000; /* කළු Border එකක් ඇතුළතින් */
+}
+/* Ring එකට Glow එකක් දීම */
+.progress-ring-circle {
+    transition: stroke-dashoffset 0.8s ease-in-out;
+    stroke-linecap: round; /* කෙළවරවල් රවුම් කිරීම */
+    filter: drop-shadow(0 0 5px var(--ring-glow)); /* Glow Effect */
+}
+.remove-icon {
+    font-size: 14px;
+    color: #ccc;
+    cursor: pointer;
+    transition: 0.2s;
+    margin-left: 5px;
+}
+
+.remove-icon:hover {
+    color: #e74c3c; /* Hover කළාම රතු පාට වේ */
+    transform: scale(1.2);
+}
+
+/* Task එක ඇතුළේ items පෙළගැස්වීම */
+.task-item-big {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    margin-bottom: 4px;
+    background: #f8f9fa;
+    border-left: 4px solid #4facfe;
+    border-radius: 4px;
+}
+.day-number {
+    position: absolute;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text-color);
+}
+
+/* පහළින් වැටෙන පැය ගණන ලස්සන කිරීම */
+.day-stats {
+    font-size: 10px;
+    font-weight: 600;
+    margin-top: 8px;
+    color: rgba(255, 255, 255, 0.6);
+    background: rgba(0, 0, 0, 0.2);
+    padding: 2px 8px;
+    border-radius: 20px;
+}
+/* Modal එකෙන් පිට ක්ලික් කළාම වහන්න ඕන නිසා මේක වැදගත් */
+/* දවස් 7 ලස්සනට බෙදී යන විදිහ */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr); /* තීරුව 7ක්ම තියෙනවා */
+    gap: 5px;
+    width: 100%;
+}
+
+/* ෆෝන් එකට ගැලපෙන විදිහ (Media Query) */
+@media (max-width: 600px) {
+    .main-content {
+        padding: 10px; /* පැතිවල ඉඩ අඩු කරනවා */
+    }
+
+    .calendar-day {
+        min-height: 50px; /* කොටු වල උස අඩු කරනවා */
+        font-size: 12px;  /* අකුරු පොඩ්ඩක් කුඩා කරනවා */
+        padding: 5px;
+    }
+
+    .study-flow-calendar h2 {
+        font-size: 1.2rem; /* මාතෘකාව පොඩ්ඩක් කුඩා කරනවා */
+    }
+}
+/* Footer Styles */
+.footer {
+    width: 100%;
+    margin-top: 50px;
+    padding-bottom: 20px;
+}
+
+.glass-footer {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: inline-block;
+    padding: 10px 30px !important;
+}
+
+.developer-name {
+    color: #ff4d4d; /* ඔයාගේ clock එකේ රතු පාටට ගැලපෙන්න */
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.text-muted {
+    color: #aaaaaa !important;
+    font-size: 0.9rem;
+}
+/* ප්‍රධාන මාතෘකා (OS Operating System වගේ ඒවා) */
+#manualSyllabusList h5 {
+    color: #000000 !important; /* සම්පූර්ණ කළු පාට */
+    font-weight: 900 !important; /* උපරිම Bold කළා */
+    font-size: 1.7rem !important;
+}
+
+/* සිලබස් එකේ කරුණු (5.1, 5.2 වගේ අංක සහිත පේළි) */
+#manualSyllabusList .form-check-label {
+    color: #000000 !important; /* අකුරු කළු පාට කළා */
+    font-weight: 900 !important; /* අකුරු Bold කළා */
+    font-size: 19px !important;
+    opacity: 1 !important; /* මැකී ගිය ගතිය ඉවත් කළා */
+}
+
+/* Checkbox එක ඇතුළේ තියෙන ලකුණ සහ පෙනුම */
+#manualSyllabusList .form-check-input {
+    border: 2px solid #000000 !important; /* Checkbox එකේ වටේ බෝඩරය තද කළා */
+}
+
+/* Progress bar එකේ අගය පෙන්වන අකුරු */
+.progress-text {
+    color: #000000 !important;
+    font-weight: bold !important;
+}
+.scroll-buttons {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 9999 !important; /* මේකෙන් බටන් එක අනිත් හැම දේකටම උඩින් තියෙනවා */
+}
+
+.scroll-buttons button {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #ff0000; /* ICT theme color */
+    color: white;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    transition: 0.3s;
+}
+
+/* මුලින්ම උඩට යන බටන් එක පේන්න ඕන නැති නිසා */
+#scrollTopBtn {
+    opacity: 0;
+    visibility: hidden;
+    transition: 0.4s ease;
+}
+
+/* Scroll කරද්දී බටන් එක පේන්න දාන class එක */
+#scrollTopBtn.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+    </style>
+</head>
+
+<body data-theme="light">
+
+<div id="welcome-screen">
+    <div class="welcome-loader"></div>
+    <div class="welcome-text">WELCOME</div>
+    <p class="mt-2 opacity-50">දැන් වැඩ පටන් ගමුද? 🚀</p>
+</div>
+
+<div id="successOverlay">
+    <div class="pop-card">
+        <div class="pop-icon text-success mb-3" style="font-size: 4rem;"><i class="fa-solid fa-circle-check"></i></div>
+        <h2 class="fw-bold mb-3">නියමයි කොල්ලෝ!</h2>
+        <h4 class="mb-4 text-secondary">ඔහොම යමන් මචෝ... 🚀</h4>
+        <p class="mb-4">අද දවසේ ඔයාගේ ඉලක්කය සාර්ථකව සම්පූර්ණ කළා. <br> උබට ඕන නම් පොඩි break එකක් ගනිම්!</p>
+        <button onclick="stopAlarmManually()" class="btn btn-primary btn-lg w-100 rounded-pill fw-bold">Done</button>
+    </div>
+</div>
+
+<div class="sidebar" id="sidebar">
+    <div class="text-end p-2">
+    <button onclick="toggleLanguage()" class="btn btn-sm btn-outline-light rounded-pill px-3" id="langBtn">
+        <i class="fa-solid fa-language me-2"></i>English
+    </button>
+</div>
+    <div class="sidebar-brand">STUDY FLOW</div>
+    <div class="nav flex-column">
+       
+                <div class="nav-link" onclick="showPage('inputPage', this)"><i class="fa-solid fa-plus-circle me-2"></i> New Entry</div>
+ <div class="nav-link" onclick="showPage('syllabusPage', this)">
+    <i class="fa-solid fa-list-check me-2"></i> Syllabus Plan
+</div>
+<a href="dashboard.html" class="nav-link">
+    <i class="fa-solid fa-chart-pie"></i> Progress Dashboard
+</a>
+        <div class="nav-link active" onclick="showPage('timerPage', this)"><i class="fa-solid fa-stopwatch me-2"></i> Focus Timer</div>
+        <div class="nav-link" onclick="showPage('todoPage', this)"><i class="fa-solid fa-list-check me-2"></i> To-Do List</div>
+        <div class="nav-link" onclick="showPage('notesPage', this)"><i class="fa-solid fa-book-open me-2"></i> Study Notes</div>
+
+<div class="nav-link" onclick="showPage('analyticsPage', this)"><i class="fa-solid fa-chart-line me-2"></i> Analytics</div>
+       <div class="nav-link" onclick="showPage('calendarPage', this)"><i class="fa-solid fa-calendar-check text-success me-2"></i>  calendar</div>
+
+    </div>
+</div>
+
+<div id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<div class="main-content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <button class="menu-btn" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+        
+        <h4 class="fw-bold m-0" id="currentTitle">Focus Station</h4>
+        <button onclick="toggleTheme()" class="btn btn-white shadow-sm rounded-pill px-3"><i id="theme-icon" class="fas fa-moon"></i></button>
+    </div>
+
+   <div id="timerPage" class="page-section active">
+    <div class="quote-card mb-4">
+        <h4 class="fw-bold mb-1">Work hard, buddy! 🚀
+</h4>
+        <p class="m-0 opacity-75">අද දවසේ ඉලක්කය සම්පූර්ණ කරනකම් අතාරින්න එපා.</p>
+    </div>
+
+    <div class="glass-card text-center py-5 shadow-lg">
+        <div id="targetDisplay" class="badge bg-soft-primary text-primary mb-4 px-3 py-2" style="background: rgba(99, 102, 241, 0.1); border-radius: 10px;">
+            <i class="fa-solid fa-bullseye me-2"></i>NO TARGET SET
+        </div>
+<div class="tree-container mb-2" id="treeContainer">
+    <span class="tree-stage">🌱</span>
+</div>
+        <div class="timer-container">
+            <svg class="timer-svg" viewBox="0 0 300 300">
+                <circle class="timer-bg" cx="150" cy="150" r="140"></circle>
+                <circle id="progressCircle" class="timer-progress" cx="150" cy="150" r="140"></circle>
+            </svg>
+            <div class="timer-content">
+                <div class="timer-display" id="display">00:00:00</div>
+                <div class="timer-subtext" id="statusLabel">Remaining</div>
+            </div>
+        </div>
+
+        <div class="timer-btn-group">
+            <button id="stopBtn" onclick="stopTimerEarly()" class="btn btn-danger rounded-pill px-4" style="display: none;">
+    <i class="fa-solid fa-stop me-2"></i>STOP & SAVE
+</button>
+            <button id="startBtn" onclick="startTimer()" class="btn btn-primary btn-focus shadow-lg">
+                <i class="fa-solid fa-play me-2"></i>START SESSION
+            </button>
+            
+           
+        </div>
+        
+        <button id="cancelBtn" onclick="cancelTimer()" class="btn btn-link text-muted mt-3" style="display:none; text-decoration: none;">
+            <i class="fa-solid fa-xmark me-1"></i> Cancel Session
+        </button>
+        
+</button>
+    </div>
+</div>
+
+  <div id="todoPage" class="page-section">
+    <div class="row">
+        <div class="col-md-5">
+            <div class="glass-card p-4 h-100">
+                <h4 class="fw-bold mb-4 text-primary"><i class="fa-solid fa-list-check me-2"></i>Daily Missions</h4>
+                <div class="mission-input-box p-3 bg-light rounded-4 mb-3">
+                    <label class="small fw-bold text-muted mb-2">Enter a new task.</label>
+                    <input type="text" id="todoInput" class="form-control border-0 bg-transparent p-0 fs-5" placeholder="උදා: ICT පාඩම ඉවර කිරීම...">
+                </div>
+                <button onclick="addTodo()" class="btn btn-primary w-100 py-3 rounded-4 fw-bold shadow-sm">
+                    <i class="fa-solid fa-plus me-2"></i>ADD TO MISSIONS
+                </button>
+            </div>
+        </div>
+
+        <div class="col-md-7">
+            <div class="glass-card p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h6 class="fw-bold m-0">Today's Progress</h6>
+                    <span id="todoStats" class="badge bg-soft-primary text-primary rounded-pill px-3">0/0 Done</span>
+                </div>
+                <div class="progress mb-4" style="height: 10px; border-radius: 20px; background: #eee;">
+                    <div id="todoProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%; border-radius: 20px;"></div>
+                </div>
+                <div id="todoList" class="todo-scroll-area">
+                    </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- 1. කලින් තිබ්බ තැනින් අයින් කරලා මේ විදිහට අලුත් Section එකක් ඇතුළට ගන්න -->
+<div id="syllabusPage" class="page-section" style="display:none;">
+    <div class="card mb-4 border-0 shadow-lg" style="border-radius: 15px; background: #1a1d21;">
+        <div class="card-body p-4">
+            <h6 style="color: #ff0202; font-weight: 700; margin-bottom: 20px;">
+                <i class="fa-solid fa-plus-circle me-2"></i>Create New Study Plan
+            </h6>
+            <input type="text" id="subjectTitle" class="form-control mb-3 custom-input" placeholder="Subject & Lesson Name">
+            <select id="subjectType" class="form-select mb-3 custom-input">
+                <option value="ICT">ICT (Blue)</option>
+                <option value="SFT">SFT (Yellow)</option>
+                <option value="ET">ET (Purple)</option>
+            </select>
+            <textarea id="subTasks" class="form-control mb-3 custom-input" rows="3" placeholder="Paste tasks (# for headings)"></textarea>
+            <button onclick="addNewManualPlan()" class="btn btn-info w-100 fw-bold py-2" style="border-radius: 10px;">Add to My Plans</button>
+        </div>
+    </div>
+    
+    <!-- Syllabus List එක මේ ඇතුළටම ගන්න -->
+    <div id="manualSyllabusList" class="mt-4"></div>
+</div>
+
+<div id="calendarPage" class="page-section" style="display:none;">
+    <div class="row g-4">
+        <div class="col-12"> <div class="glass-card p-4 border-0 shadow-lg">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h4 class="fw-bold m-0 text-gradient">Study Flow Calendar</h4>
+                        <div class="d-flex align-items-center gap-2 mt-2">
+                            <input type="number" id="dailyGoalInput" class="form-control form-control-sm" style="width: 80px;" placeholder="Goal h">
+                            <button onclick="setGoal()" class="btn btn-sm btn-primary">Set Goal</button>
+                            <span id="streakDisplay" class="ms-3 badge bg-warning text-dark">🔥 Streak: 07</span>
+                        </div>
+                    </div>
+                    
+                    <div class="month-nav d-flex align-items-center gap-2 bg-light p-1 rounded-pill">
+                        <button class="btn btn-sm btn-white rounded-circle" onclick="prevMonth()"><i class="fa-solid fa-chevron-left"></i></button>
+                        <h6 class="fw-bold m-0 px-2" id="monthDisplay">April 2026</h6>
+                        <button class="btn btn-sm btn-white rounded-circle" onclick="nextMonth()"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                </div>
+                
+                <div id="calendarGrid" class="calendar-grid-4x4">
+                    </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="inputPage" class="page-section">
+            <H2>Success is not a big thing you do in one day, but a collection of small things you do every day.</H2>
+
+    <div class="glass-card p-4">
+        <h5 class="fw-bold mb-4"><i class="fa-solid fa-circle-plus me-2 text-primary"></i>අලුත් පාඩම් ඉලක්කයක් ඇතුළත් කරන්න</h5>
+        
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="small fw-bold mb-2 d-block text-muted">විෂය තෝරන්න</label>
+                <select id="subject" class="form-select border-0 bg-light shadow-sm py-2">
+                    <option value="ICT">ICT Subject</option>
+                    <option value="SFT">SFT Subject</option>
+                    <option value="ET">ET Subject</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="small fw-bold mb-2 d-block text-muted">කාලය (Hours)</label>
+                <input type="number" id="hoursInput" class="form-control border-0 bg-light shadow-sm py-2" step="0.1" placeholder="0.5">
+            </div>
+            <div class="col-md-5">
+                <label class="small fw-bold mb-2 d-block text-muted">පාඩම් කරන දේ (Task)</label>
+                <input list="taskOptions" id="task" class="form-control border-0 bg-light shadow-sm py-2" placeholder="තෝරන්න හෝ ඇතුළත් කරන්න...">
+                <datalist id="taskOptions">
+                    <option value="Past Paper Work">
+                    <option value="Theory Lesson">
+                    <option value="Short Note Making">
+                    <option value="Model Paper Revision">
+                    <option value="Practical Session">
+                    <option value="Unit Test Paper">
+                    <option value="Studying SFT Subject">
+                    <option value="Studying ET Subject">
+                     <option value="Studying ICT Subject">
+
+
+                        
+
+                </datalist>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button onclick="addLog()" class="btn btn-primary w-100 fw-bold py-2 shadow rounded-pill">
+                    <i class="fa-solid fa-play me-2"></i>GO!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    
+    
+<div class="glass-card p-0 overflow-hidden shadow-sm mt-4">
+    <div class="p-3 bg-dark text-white d-flex justify-content-between align-items-center">
+        <h6 class="fw-bold m-0"><i class="fa-solid fa-clock-rotate-left me-2"></i>Recent Study Sessions</h6>
+        <span class="badge bg-primary rounded-pill px-3" id="logCounter">0 Sessions</span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="taskBreakdownTable">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-4" style="width: 15%;">Date</th>
+                    <th style="width: 35%;">Specific Task</th>
+                    <th class="text-center" style="width: 15%;">Subject</th>
+                    <th class="text-center" style="width: 15%;">Duration</th>
+                    <th class="text-center" style="width: 10%;">Status</th>
+                    <th class="text-end pe-4" style="width: 10%;">Action</th>
+                </tr>
+            </thead>
+            <tbody id="masterLogBody" class="border-top-0">
+                </tbody>
+        </table>
+    </div>
+    
+    <div id="emptyTableState" class="text-center py-5 d-none">
+        <i class="fa-solid fa-folder-open text-muted mb-3" style="font-size: 3rem; opacity: 0.3;"></i>
+        <p class="text-muted">තවම දත්ත ඇතුළත් කර නැත. වැඩ පටන් ගමු!</p>
+    </div>
+</div>
+
+</div>
+  <div id="notesPage" class="page-section">
+    <div id="editorWrapper" class="card border-0 shadow-sm mb-4" style="border-radius: 15px; overflow: hidden;">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 border-0">
+            <div class="d-flex align-items-center gap-3">
+                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                    <i class="fa-solid fa-pen-fancy"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold m-0">Smart Study Notes</h5>
+                    <small class="text-muted">Create professional formatted notes</small>
+                </div>
+            </div>
+            <button onclick="toggleFullscreen()" class="btn btn-light btn-sm rounded-pill px-3 border">
+                <i id="fsIcon" class="fa-solid fa-expand me-1"></i> Fullscreen
+            </button>
+        </div>
+
+        <div class="editor-toolbar d-flex flex-wrap gap-2 p-2 bg-light border-top border-bottom">
+            <div class="btn-group">
+                <button onclick="execCmd('bold')" class="btn btn-sm btn-white border shadow-sm" title="Bold"><i class="fa-solid fa-bold"></i></button>
+                <button onclick="execCmd('italic')" class="btn btn-sm btn-white border shadow-sm" title="Italic"><i class="fa-solid fa-italic"></i></button>
+                <button onclick="execCmd('underline')" class="btn btn-sm btn-white border shadow-sm" title="Underline"><i class="fa-solid fa-underline"></i></button>
+                <button id="voiceBtn" onclick="startVoiceTyping()" class="btn btn-sm btn-outline-danger border-0 shadow-sm" title="Voice Typing">
+    <i class="fa-solid fa-microphone"></i>
+</button>
+<span id="voiceStatus" class="small text-danger ms-2" style="display:none; font-size: 0.7rem;">Listening...</span>
+            </div>
+
+            <div class="vr mx-1"></div>
+
+            <select onchange="execCmd('fontSize', this.value)" class="form-select form-select-sm w-auto border shadow-sm">
+                <option value="3">Font Size</option>
+                <option value="4">Large</option>
+                <option value="6">Heading</option>
+                <option value="2">Small</option>
+            </select>
+
+            <div class="d-flex align-items-center border rounded bg-white px-2 shadow-sm">
+                <i class="fa-solid fa-palette me-2 text-muted" style="font-size: 0.8rem;"></i>
+                <input type="color" onchange="execCmd('foreColor', this.value)" class="form-control form-control-color border-0 p-0 bg-transparent" style="width: 25px; height: 25px;" title="Text Color">
+            </div>
+
+            <div class="vr mx-1"></div>
+
+            <button onclick="execCmd('insertUnorderedList')" class="btn btn-sm btn-white border shadow-sm"><i class="fa-solid fa-list-ul"></i></button>
+        </div>
+
+        <div id="richNoteInput" contenteditable="true" class="p-4" 
+             style="min-height: 200px; outline: none; background: #fff; font-size: 1.05rem; line-height: 1.6;" 
+             placeholder="මෙතන ඔබේ සටහන ලියන්න (Enter එබූ විට නව පේළියට යයි)..."></div>
+
+        <div class="card-footer bg-white border-0 p-3">
+            <div class="row align-items-center g-3">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-0"><i class="fa-solid fa-tag text-primary"></i></span>
+                        <select id="noteSubject" class="form-select border-0 bg-light shadow-sm">
+                            <option value="ICT">ICT Subject</option>
+                            <option value="SFT">SFT Subject</option>
+                            <option value="ET">ET Subject</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-8 text-end">
+                    <button onclick="addNote()" class="btn btn-primary px-5 rounded-pill fw-bold shadow">
+                        <i class="fa-solid fa-cloud-arrow-up me-2"></i>SAVE NOTE
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <hr class="my-5">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="fw-bold m-0"><i class="fa-solid fa-grip-vertical me-2 text-primary"></i>Recent Study Materials</h5>
+        <div id="notesCount" class="badge bg-primary rounded-pill">0 Notes</div>
+    </div>
+    <div id="notesContainer" class="row g-4"></div>
+</div>
+
+    <div id="statsPage" class="page-section">
+        <div class="row g-4 mb-4">
+            <div class="col-md-6"><div class="stat-box" style="background: linear-gradient(45deg, #3b82f6, #2563eb);"><h6>Total Hours</h6><h2 id="totalHoursLabel">0.0</h2></div></div>
+            <div class="col-md-6"><div class="stat-box" style="background: linear-gradient(45deg, #10b981, #059669);"><h6>Today's Progress</h6><h2 id="progressText">0%</h2></div></div>
+        </div><div class="glass-card level-card p-4 mb-4">
+    <div class="row align-items-center">
+        <div class="col-md-3 text-center">
+            <div class="level-badge-main mx-auto" id="userLevel">1</div>
+            <div class="xp-label fw-bold">CURRENT LEVEL</div>
+        </div>
+        <div class="col-md-9">
+            <div class="d-flex justify-content-between align-items-end mb-2">
+                <div>
+                    <h4 class="fw-bold text-white m-0" id="rankTitle">STUDY NOVICE</h4>
+                    <span class="xp-label" id="xpText">240 / 500 XP TO LEVEL UP</span>
+                </div>
+                <div class="text-white fw-bold h5" id="xpPercentText">45%</div>
+            </div>
+            <div class="progress xp-progress shadow-sm" style="height: 15px !important;">
+                <div id="xpBar" class="progress-bar bg-primary progress-bar-striped progress-bar-animated" style="width: 45%"></div>
+            </div>
+            
+            <div class="d-flex gap-3 mt-4" id="badgeContainer">
+                <div class="badge-slot" title="First Step (1h)"><i class="fa-solid fa-seedling"></i></div>
+                <div class="badge-slot" title="ICT Ninja (2h ICT)"><i class="fa-solid fa-user-ninja"></i></div>
+                <div class="badge-slot" title="Study Warrior (5h Today)"><i class="fa-solid fa-shield-halved"></i></div>
+                <div class="badge-slot" title="King of Tech (10h Total)"><i class="fa-solid fa-crown"></i></div>
+            </div>
+        </div>
+    </div>
+</div>
+        <div class="glass-card">
+
+            <h5 class="fw-bold text-center mb-4">Subject Distribution</h5>
+            <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius: 20px; background: white;">
+    <h5 class="fw-bold mb-4 text-center">📊 විෂයයන් අතර කාලය බෙදී ගිය ආකාරය</h5>
+    <div style="max-height: 300px; position: relative;">
+        <canvas id="subjectChart"></canvas>
+    </div>
+</div>
+            <hr>
+            <h6 class="fw-bold mb-3"><i class="fa-solid fa-scale-balanced me-2"></i>Subject Balance Helper</h6>
+            <div id="balanceProgress"></div>
+        </div>
+    </div>
+   
+<div id="analyticsPage" class="page-section container-fluid mt-4" style="display:none;">
+    <h3 class="fw-bold mb-4 text-dark">📊 Study Performance Analytics</h3>
+
+    <div class="row g-3 mb-4 text-center">
+        <div class="col-md-4">
+    <div class="card border-0 shadow-sm p-4 analytics-card text-center overflow-hidden">
+        <div class="subject-icon ict-bg"><i class="fa-solid fa-laptop-code"></i></div>
+        <h6 class="text-muted small fw-bold mt-3">ICT PERFORMANCE</h6>
+        <div class="gauge-value mt-2" id="ictVal">0h</div>
+        <p class="text-xs text-primary mb-0">Tech & Systems</p>
+    </div>
+</div>
+
+<div class="col-md-4">
+    <div class="card border-0 shadow-sm p-4 analytics-card text-center overflow-hidden">
+        <div class="subject-icon sft-bg"><i class="fa-solid fa-flask-vial"></i></div>
+        <h6 class="text-muted small fw-bold mt-3">SFT PERFORMANCE</h6>
+        <div class="gauge-value mt-2" id="sftVal">0h</div>
+        <p class="text-xs text-warning mb-0">Science & Theory</p>
+    </div>
+</div>
+
+<div class="col-md-4">
+    <div class="card border-0 shadow-sm p-4 analytics-card text-center overflow-hidden">
+        <div class="subject-icon et-bg"><i class="fa-solid fa-gears"></i></div>
+        <h6 class="text-muted small fw-bold mt-3">ET PERFORMANCE</h6>
+        <div class="gauge-value mt-2" id="etVal">0h</div>
+        <p class="text-xs text-success mb-0">Engineering Tech</p>
+    </div>
+</div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm p-4 h-100 analytics-card text-center">
+                <h6 class="fw-bold mb-4">SUBJECT DISTRIBUTION</h6>
+                <div class="chart-container" style="position: relative; height:250px;">
+                    <canvas id="subjectDoughnut"></canvas>
+                </div>
+                <p class="text-muted small mt-3">විෂයයන් අතර කාලය බෙදී ගිය ප්‍රතිශතය</p>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm p-4 h-100 analytics-card">
+                <h6 class="fw-bold mb-4">WEEKLY PROGRESS BY SUBJECT</h6>
+                <div class="chart-container" style="position: relative; height:300px;">
+                    <canvas id="weeklyBarChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // 1. මේ ටික අනිවාර්යයෙන්ම මුලින්ම තියෙන්න ඕනේ
+let charts = { doughnut: null, bar: null }; // Chart handle කරන්න
+let timerInterval = null;
+let beepInterval = null;
+let elapsedTime = 0;
+let targetTimeMs = 0;
+let audioCtx = null;
+
+ window.addEventListener('load', () => {
+    // 1. Welcome screen එක අයින් කරන logic එක
+    const welcome = document.getElementById('welcome-screen');
+    if (welcome) {
+        setTimeout(() => {
+            welcome.style.opacity = '0';
+            setTimeout(() => { 
+                welcome.style.display = 'none'; 
+            }, 800);
+        }, 2000);
+    }
+
+    // 2. දත්ත ටික Load කරන ටික (පිළිවෙලට)
+    renderNotes(); 
+    renderTodos();
+    displayLogs();
+    renderCalendar(); // Refresh කළාම calendar එක එන්නේ මෙයා නිසයි
+});
+
+
+
+    // --- NAVIGATION LOGIC ---
+    function showPage(id, el) {
+        document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+        const targetPage = document.getElementById(id);
+        if(targetPage) targetPage.classList.add('active');
+        
+        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+        if(el) el.classList.add('active');
+        
+        const titles = { 
+            'timerPage': 'Focus Station', 
+            'todoPage': 'To-Do List', 
+            'notesPage': 'Study Notes',
+            'inputPage': 'New Entry', 
+            'logPage': 'Master Log',
+            'analyticsPage': 'Elite Analytics' 
+        };
+        document.getElementById('currentTitle').innerText = titles[id] || 'Study Tool';
+        
+        if (window.innerWidth <= 992) toggleSidebar();
+        
+        // Analytics Page එකට යන විට දත්ත Load කිරීම
+        if(id === 'analyticsPage' || id === 'logPage') {
+            displayLogs();
+        }
+       
+    }
+let currentLang = 'si'; // මුලින්ම සිංහල තියෙන්නේ
+
+function toggleLanguage() {
+    const btn = document.getElementById('langBtn');
+    
+    if (currentLang === 'si') {
+        // සිංහල -> English
+        document.querySelector('h2').innerText = "Success isn't about one big thing, it's the sum of small things you do every day. G.M.V.V";
+        document.querySelector('h5').innerHTML = '<i class="fa-solid fa-circle-plus me-2 text-primary"></i>Add New Study Goal';
+        document.getElementById('logCounter').previousElementSibling.innerHTML = '<i class="fa-solid fa-clock-rotate-left me-2"></i>Recent Study Sessions';
+        
+        // Table Headers
+        const headers = document.querySelectorAll('th');
+        headers[0].innerText = "Date";
+        headers[1].innerText = "Specific Task";
+        headers[2].innerText = "Subject";
+        headers[3].innerText = "Duration";
+        headers[4].innerText = "Status";
+        headers[5].innerText = "Action";
+
+        btn.innerHTML = '<i class="fa-solid fa-language me-2"></i>සිංහල';
+        currentLang = 'en';
+    } else {
+        // English -> සිංහල
+        document.querySelector('h2').innerText = '"සාර්ථකත්වය කියන්නේ දවසක කරන ලොකු දෙයක් නෙවෙයි, හැමදාම කරන පොඩි පොඩි දේවල් වල එකතුවක්. G.M.V.V"';
+        document.querySelector('h5').innerHTML = '<i class="fa-solid fa-circle-plus me-2 text-primary"></i>අලුත් පාඩම් ඉලක්කයක් ඇතුළත් කරන්න';
+        document.getElementById('logCounter').previousElementSibling.innerHTML = '<i class="fa-solid fa-clock-rotate-left me-2"></i>Recent Study Sessions';
+        
+        // Table Headers (Back to Sinhala)
+        const headers = document.querySelectorAll('th');
+        headers[0].innerText = "දිනය";
+        headers[1].innerText = "පාඩම් කළ දේ";
+        headers[2].innerText = "විෂය";
+        headers[3].innerText = "කාලය";
+        headers[4].innerText = "තත්ත්වය";
+        headers[5].innerText = "ක්‍රියාව";
+
+        btn.innerHTML = '<i class="fa-solid fa-language me-2"></i>English';
+        currentLang = 'si';
+    }
+}
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        sidebar.classList.toggle('active');
+        overlay.style.display = sidebar.classList.contains('active') ? 'block' : 'none';
+    }
+
+    function toggleTheme() {
+        const body = document.body;
+        const isDark = body.getAttribute('data-theme') === 'dark';
+        body.setAttribute('data-theme', isDark ? 'light' : 'dark');
+        document.getElementById('theme-icon').className = isDark ? 'fas fa-moon' : 'fas fa-sun text-warning';
+    }
+
+    // --- TO-DO LIST LOGIC ---
+    function addTodo() {
+        const input = document.getElementById('todoInput');
+        const text = input.value.trim();
+        if (!text) return;
+        const todos = JSON.parse(localStorage.getItem('studyTodos')) || [];
+        todos.push({ id: Date.now(), text: text, completed: false });
+        localStorage.setItem('studyTodos', JSON.stringify(todos));
+        input.value = "";
+        renderTodos();
+    }
+
+    function renderTodos() {
+    const todos = JSON.parse(localStorage.getItem('studyTodos')) || [];
+    const list = document.getElementById('todoList');
+    const stats = document.getElementById('todoStats'); // මෙන්න මේ ID එක ඔයාගේ HTML එකේ තියෙන්නේ
+    const progressBar = document.getElementById('todoProgressBar');
+    
+    if(!list) return;
+    list.innerHTML = "";
+    
+    let completedCount = 0;
+
+    todos.forEach(t => {
+        if(t.completed) completedCount++;
+        let itemHtml = `
+            <div class="todo-item ${t.completed ? 'completed' : ''}" onclick="toggleTodo(${t.id})">
+                <div class="todo-check">
+                    ${t.completed ? '<i class="fa-solid fa-check text-white" style="font-size: 12px;"></i>' : ''}
+                </div>
+                <div class="todo-text">${t.text}</div>
+                <button onclick="event.stopPropagation(); deleteTodo(${t.id})" class="btn btn-sm text-danger opacity-25 hover-opacity-100 border-0">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            </div>`;
+        list.insertAdjacentHTML('beforeend', itemHtml);
+    });
+
+    // --- PROGRESS එක UPDATE කරන කොටස ---
+    const total = todos.length;
+    
+    // 1. "0/0 Done" කියන අකුරු ටික Update කිරීම
+    if(stats) {
+        stats.innerText = `${completedCount}/${total} Done`;
+    }
+
+    // 2. Progress Bar එක Update කිරීම
+    if(progressBar) {
+        const percent = total > 0 ? (completedCount / total) * 100 : 0;
+        progressBar.style.width = percent + "%";
+        
+        // පාට මාරු කරන්නත් පුළුවන් (වැඩේ ඉවර වෙනකොට කොළ පාට වෙන්න)
+        if(percent === 100) {
+            progressBar.classList.add('bg-success');
+        } else {
+            progressBar.classList.remove('bg-success');
+        }
+    }
+}
+
+    function toggleTodo(id) {
+        let todos = JSON.parse(localStorage.getItem('studyTodos')) || [];
+        todos = todos.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+        localStorage.setItem('studyTodos', JSON.stringify(todos));
+        renderTodos();
+    }
+
+    function deleteTodo(id) {
+        let todos = JSON.parse(localStorage.getItem('studyTodos')) || [];
+        localStorage.setItem('studyTodos', JSON.stringify(todos.filter(t => t.id !== id)));
+        renderTodos();
+    }
+
+    // --- TIMER LOGIC ---
+    function playBeep() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.5);
+    }
+
+// 1. මේ variable එක මුලින්ම තියෙනවද බලන්න
+let startTime; 
+
+function startTimer() {
+    // 1. Target එකක් නැත්නම් හෝ කලින් තිබුණ එකක් නැත්නම් check කරන්න
+    if (targetTimeMs === 0) {
+        if (window.lastSetTargetMs && window.lastSetTargetMs > 0) {
+            targetTimeMs = window.lastSetTargetMs;
+        } else {
+            return alert("කරුණාකර ඉලක්කයක් ඇතුළත් කරන්න.");
+        }
+    }
+document.getElementById('startBtn').innerText = "START";
+    // 2. කලින් Timer එකක් දුවනවා නම් ඒක නතර කරන්න
+    if (timerInterval) clearInterval(timerInterval);
+
+    // 3. ගතවුණු කාලය අනුව ආරම්භක වෙලාව සකස් කිරීම
+    startTime = Date.now() - elapsedTime;
+
+    timerInterval = setInterval(() => {
+        elapsedTime = Date.now() - startTime;
+        updateDisplay();
+
+        // 4. කාලය අවසන් වූ විට
+        if (elapsedTime >= targetTimeMs) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            startAlarm();
+            
+            window.lastSetTargetMs = 0; 
+            document.getElementById('stopBtn').style.display = 'none';
+            document.getElementById('cancelBtn').style.display = 'none';
+            
+            // Start button එක ආයේ පෙන්වන්න
+            document.getElementById('startBtn').style.display = 'inline-block';
+        }
+    }, 1000);
+
+    // --- UI පාලනය ---
+    document.getElementById('startBtn').style.display = 'none';
+    document.getElementById('stopBtn').style.display = 'inline-block';
+    document.getElementById('cancelBtn').style.display = 'inline-block';
+    
+    const statusLabel = document.getElementById('statusLabel');
+    if (statusLabel) statusLabel.innerText = "Focusing...";
+}
+
+    function updateDisplay() {
+        let h = Math.floor(elapsedTime / 3600000);
+        let m = Math.floor((elapsedTime % 3600000) / 60000);
+        let s = Math.floor((elapsedTime % 60000) / 1000);
+        document.getElementById('display').innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+
+        if (targetTimeMs > 0) {
+            const circle = document.getElementById('progressCircle');
+            const tree = document.getElementById('treeContainer');
+            const circumference = 880;
+            const progress = elapsedTime / targetTimeMs;
+            const offset = circumference - (progress * circumference);
+            if(circle) circle.style.strokeDashoffset = Math.max(0, offset);
+
+            let stage = "🌱";
+            if (progress > 0.2) stage = "🌿";
+            if (progress > 0.5) stage = "🪴";
+            if (progress > 0.8) stage = "🌳";
+            if (progress >= 1.0) stage = "✨🌳✨";
+            if (tree && tree.innerText !== stage) tree.innerHTML = `<span class="tree-stage">${stage}</span>`;
+        }
+    }
+
+    function startAlarm() {
+        clearInterval(beepInterval);
+        playBeep();
+        beepInterval = setInterval(playBeep, 1000);
+        document.getElementById('successOverlay').style.display = 'flex';
+        document.getElementById('stopBtn').style.display = 'block'; // Stop button එක පෙන්වන්න
+
+    }
+
+   function stopAlarmManually() {
+    // 1. Alarm එක සදහටම නවත්තන්න (Interval එක clear කරන්න)
+    if (beepInterval) {
+        clearInterval(beepInterval);
+        beepInterval = null; 
+    }
+
+    // 2. Timer එක නතර කරන්න
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+
+    // 3. Audio Context එක නිහඬ කරන්න (මේක අලුතින් දැම්මේ)
+    if (audioCtx) {
+        audioCtx.close().then(() => {
+            audioCtx = null;
+        });
+    }
+
+    // --- ඉතිරි දත්ත සේව් කරන කොටස ---
+    let logs = JSON.parse(localStorage.getItem('studyLogs')) || [];
+    const today = new Date().toLocaleDateString('en-CA');
+
+    if (window.currentPendingEntry) {
+        const newEntry = {
+            id: String(Date.now()),
+            date: today,
+            subject: window.currentPendingEntry.subject,
+            hours: window.currentPendingEntry.hours,
+            task: window.currentPendingEntry.task,
+            status: 'Completed'
+        };
+        logs.push(newEntry);
+        localStorage.setItem('studyLogs', JSON.stringify(logs));
+        window.currentPendingEntry = null;
+    }
+
+    // UI එක Reset කිරීම
+    elapsedTime = 0;
+    targetTimeMs = 0;
+    updateDisplay();
+    
+    // Overlay එක වසා දැමීම
+    document.getElementById('successOverlay').style.display = 'none';
+    document.getElementById('startBtn').disabled = false;
+    
+    // Refresh Tables & Calendar
+    displayLogs();
+    renderCalendar();
+}
+   function cancelTimer() {
+    if(confirm("මුළු Session එකම අයින් කරන්නද?")) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        
+        // කාලය සම්පූර්ණයෙන්ම මකා දැමීම
+        elapsedTime = 0; 
+        targetTimeMs = 0;
+        window.lastSetTargetMs = 0;
+        
+        updateDisplay();
+        
+        document.getElementById('startBtn').style.display = 'inline-block';
+        document.getElementById('startBtn').innerText = "START SESSION";
+        document.getElementById('stopBtn').style.display = 'none';
+        document.getElementById('cancelBtn').style.display = 'none';
+        document.getElementById('targetDisplay').innerText = "Session එක Cancel කළා. ❌";
+    }
+}
+
+ // පිටුව Load වෙද්දීම කලින් Save කරපු දත්ත පෙන්වන්න
+document.addEventListener('DOMContentLoaded', () => {
+    displayLogs();
+});
+function stopTimerEarly() {
+    // 1. Timer එක වහාම නතර කරන්න (Alert එකක් අහන්නේ නැතුව)
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+
+    // 2. UI එක වෙනස් කිරීම (Resume කිරීමට හැකි වන සේ)
+    document.getElementById('startBtn').style.display = 'inline-block';
+    document.getElementById('startBtn').innerText = "RESUME SESSION"; // බටන් එකේ නම Resume ලෙස මාරු වේ
+    
+    document.getElementById('stopBtn').style.display = 'none';
+    document.getElementById('cancelBtn').style.display = 'inline-block';
+    
+    // Status එක Update කිරීම
+    document.getElementById('targetDisplay').innerText = "Timer එක Pause කළා. ⏸️";
+}
+function addLog() {
+    const subject = document.getElementById('subject').value;
+    const hoursInput = document.getElementById('hoursInput');
+    const taskInput = document.getElementById('task');
+    
+    const hours = hoursInput.value;
+    const task = taskInput.value;
+
+    if (!hours || !task) {
+        alert("විස්තර ඇතුළත් කරන්න මචෝ!");
+        return;
+    }
+
+    // --- පසුව සේව් කිරීම සඳහා තාවකාලිකව දත්ත තබා ගැනීම ---
+    window.currentPendingEntry = {
+        subject: subject,
+        hours: hours,
+        task: task
+    };
+
+    // --- ටයිමර් එකට අගයන් ලබා දීම ---
+    // පැය ගණන Milliseconds වලට හරවමු (Hours * 3600000)
+    targetTimeMs = parseFloat(hours) * 3600000; 
+    
+    // වැදගත්ම පේළිය: ටයිමර් එක Stop කළත් මතක තියාගන්න මෙතනට අගය සේව් කරනවා
+    window.lastSetTargetMs = targetTimeMs; 
+    
+    elapsedTime = 0; // පරණ වෙලාවල් තියෙනවා නම් අයින් කරන්න
+    
+    // ටයිමර් එකේ Display එක Update කරන්න
+    updateDisplay();
+    document.getElementById('targetDisplay').innerText = `Target: ${hours}h for ${subject}`;
+
+    // --- පේජ් එක මාරු කිරීම ---
+    showPage('timerPage', document.querySelector('[onclick*="timerPage"]'));
+
+    // --- ටයිමර් එක Start කිරීම ---
+    startTimer();
+
+    // Input fields හිස් කරන්න
+    hoursInput.value = "";
+    taskInput.value = "";
+}
+function resetTimerUI() {
+    elapsedTime = 0;
+    // targetTimeMs = 0; // <--- මේක අයින් කරලා තියන්න!
+    
+    updateDisplay();
+    document.getElementById('startBtn').style.display = 'inline-block';
+    document.getElementById('stopBtn').style.display = 'none';
+    document.getElementById('cancelBtn').style.display = 'none';
+}
+function displayLogs() {
+    const logs = JSON.parse(localStorage.getItem('studyLogs')) || [];
+    const tableBody = document.getElementById('masterLogBody');
+    const logCounter = document.getElementById('logCounter');
+    
+    if (!tableBody) return;
+    tableBody.innerHTML = ""; 
+
+    // Analytics සඳහා දත්ත එකතු කිරීමට (Totals)
+    let todayTotals = { ICT: 0, SFT: 0, ET: 0 };
+    const todayStr = new Date().toLocaleDateString('en-CA');
+
+    logs.forEach((log) => {
+        // Table එකට Row එක එකතු කිරීම
+        const row = `
+            <tr>
+                <td class="ps-4 text-muted small">${log.date}</td>
+                <td><span class="fw-bold">${log.task}</span></td>
+                <td class="text-center">
+                    <span class="badge ${getSubjectClass(log.subject)} px-3">${log.subject}</span>
+                </td>
+                <td class="text-center fw-bold">${log.hours}h</td>
+                <td class="text-center"><i class="fa-solid fa-circle-check text-success"></i></td>
+                <td class="text-end pe-4">
+                    <button onclick="deleteLog('${log.id}')" class="btn btn-sm btn-outline-danger border-0">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+        tableBody.innerHTML += row;
+
+        // අද දවසේ දත්ත නම් පමණක් Analytics වලට එකතු කරන්න
+        if (log.date === todayStr) {
+            if (todayTotals.hasOwnProperty(log.subject)) {
+                todayTotals[log.subject] += parseFloat(log.hours || 0);
+            }
+        }
+    });
+
+    if (logCounter) logCounter.innerText = `${logs.length} Sessions`;
+
+    // --- වැදගත්ම කොටස: Analytics Charts ටික Update කිරීම ---
+    // මේ function එක ඔයාගේ script එකේ පහළ තියෙනවා
+    updateAnalyticsPage(todayTotals);
+    
+    // Gamification (XP/Level) Update කිරීම
+    const totalHoursAllTime = logs.reduce((sum, l) => sum + parseFloat(l.hours || 0), 0);
+    const totalHoursToday = todayTotals.ICT + todayTotals.SFT + todayTotals.ET;
+    updateGamification(totalHoursAllTime, totalHoursToday, todayTotals);
+}
+function deleteLog(id) {
+    if (confirm("Delete Log?")) {
+        let logs = JSON.parse(localStorage.getItem('studyLogs')) || [];
+        
+        // පරණ දත්ත වල ID නැති නිසා, අපි ID එක තියෙන ඒව විතරක් filter කරමු
+        // String(item.id) පාවිච්චි කරලා දෙපැත්තම සමාන කරමු
+        const initialCount = logs.length;
+        logs = logs.filter(item => String(item.id) !== String(id));
+        
+        if (logs.length === initialCount) {
+            // කිසිම දෙයක් මැකුණේ නැත්නම් (පරණ ID නැති දත්ත සඳහා)
+            alert("මේක පරණ දත්තයක්. LocalStorage clear කරන්න වෙයි.");
+        }
+
+        localStorage.setItem('studyLogs', JSON.stringify(logs));
+        displayLogs();
+    }
+}
+// විෂය අනුව පාට වෙනස් කරන්න (Badge colors)
+function getSubjectClass(subject) {
+    if (subject === 'ICT') return 'bg-primary text-white';
+    if (subject === 'SFT') return 'bg-warning text-dark';
+    if (subject === 'ET') return 'bg-success text-white';
+    return 'bg-secondary';
+}
+
+
+   
+    function updateGamification(totalAll, totalToday, todayData) {
+        let totalXP = totalAll * 100; 
+        let level = Math.floor(totalXP / 500) + 1;
+        let currentLevelXP = Math.floor(totalXP % 500);
+        let xpPercentage = (currentLevelXP / 500) * 100;
+        const ranks = ["STUDY NOVICE", "TECH EXPLORER", "CODE WARRIOR", "LOGIC MASTER", "AL LEGEND"];
+        let rankIdx = Math.min(level - 1, ranks.length - 1);
+
+        if(document.getElementById('userLevel')) {
+            document.getElementById('userLevel').innerText = level;
+            document.getElementById('rankTitle').innerText = ranks[rankIdx];
+            document.getElementById('xpText').innerText = `${currentLevelXP} / 500 XP TO LEVEL UP`;
+            document.getElementById('xpBar').style.width = xpPercentage + "%";
+        }
+    }
+
+    
+    // --- NOTES LOGIC ---
+    function toggleFullscreen() {
+        const wrapper = document.getElementById('editorWrapper');
+        const icon = document.getElementById('fsIcon');
+        if(wrapper) wrapper.classList.toggle('fullscreen-mode');
+        if(icon) { icon.classList.toggle('fa-expand'); icon.classList.toggle('fa-compress'); }
+    }
+
+    function execCmd(command, value = null) {
+        document.execCommand(command, false, value);
+        document.getElementById('richNoteInput').focus();
+    }
+
+const osSyllabus = [
+    { id: "5.1", title: "5.1 පරිගණක පද්ධති පිළිබඳ දෘෂ්ටි හා මෙහෙයුම් පද්ධතිවල අවශ්‍යතාවය", tasks: ["මෙහෙයුම් පද්ධතිය හැඳින්වීම", "පරිගණක පද්ධතියක ප්‍රධාන සංරචක", "පද්ධති මෘදුකාංගවල අවශ්‍යතාවය", "මෙහෙයුම් පද්ධතියේ පරිණාමය", "වර්ගීකරණය", "මෙහෙයුම් පද්ධතිවල සේවා"] },
+    { id: "5.2", title: "5.2 ගොනු කළමනාකරණය", tasks: ["ගොනු සහ බහලුම් හැඳින්වීම", "ගොනු වර්ගීකරණය", "ගොනු පාලන ඛණ්ඩය (FCB)", "ගොනු මත කළ හැකි ක්‍රියාකාරකම්", "ගොනු නාමකරණය", "ගොනු පද්ධති (FAT, NTFS)", "ගොනු ප්‍රවේශ ක්‍රම"] },
+    { id: "5.3", title: "5.3 ක්‍රියාවලි කළමනාකරණය", tasks: ["ක්‍රියාවලියක ස්වභාවය", "ක්‍රියාවලි අවස්ථා (Process States)", "ක්‍රියාවලි පාලන ඛණ්ඩය (PCB)", "ක්‍රියාවලි උපලේඛනගත කිරීම"] }
+];
+
+function renderSyllabus() {
+    const listContainer = document.getElementById('syllabusList');
+    const savedProgress = JSON.parse(localStorage.getItem('osProgress')) || {};
+    let totalTasks = 0;
+    let completedTasks = 0;
+
+    let html = '';
+    osSyllabus.forEach(section => {
+        html += `<h6 class="mt-4 mb-2 text-primary fw-bold">${section.title}</h6>`;
+        section.tasks.forEach((task, index) => {
+            totalTasks++;
+            const taskId = `${section.id}-${index}`;
+            const isChecked = savedProgress[taskId] ? 'checked' : '';
+            if(savedProgress[taskId]) completedTasks++;
+
+            html += `
+                <div class="form-check p-2 shadow-sm mb-1 bg-light rounded d-flex align-items-center" style="border-left: 4px solid #007bff;">
+                    <input class="form-check-input ms-2 me-3" type="checkbox" id="${taskId}" ${isChecked} onchange="saveProgress('${taskId}', this.checked)">
+                    <label class="form-check-label flex-grow-1" for="${taskId}">${task}</label>
+                </div>`;
+        });
+    });
+
+    listContainer.innerHTML = html;
+    
+    // Progress Bar එක Update කිරීම
+    const progressPercent = (completedTasks / totalTasks) * 100;
+    document.getElementById('studyProgress').style.width = progressPercent + '%';
+}
+
+function saveProgress(taskId, isChecked) {
+    let progress = JSON.parse(localStorage.getItem('osProgress')) || {};
+    progress[taskId] = isChecked;
+    localStorage.setItem('osProgress', JSON.stringify(progress));
+    renderSyllabus(); // ආයෙත් ඇඳලා progress bar එක හදනවා
+}
+
+// පේජ් එක load වෙද්දී මේක පෙන්නන්න
+window.onload = function() {
+    renderSyllabus();
+}
+function updateAnalyticsPage(todayData) {
+    // දත්ත තිබේ දැයි පරීක්ෂා කිරීම (නැත්නම් 0 දාන්න)
+    const ict = parseFloat(todayData.ICT || 0);
+    const sft = parseFloat(todayData.SFT || 0);
+    const et = parseFloat(todayData.ET || 0);
+
+    // --- 1. Gauges (Numbers) Update ---
+    const ictEl = document.getElementById('ictVal');
+    const sftEl = document.getElementById('sftVal');
+    const etEl = document.getElementById('etVal');
+
+    if(ictEl) ictEl.innerText = ict.toFixed(1) + "h";
+    if(sftEl) sftEl.innerText = sft.toFixed(1) + "h";
+    if(etEl) etEl.innerText = et.toFixed(1) + "h";
+
+    // --- 2. Doughnut Chart (Distribution) ---
+    const dCtx = document.getElementById('subjectDoughnut');
+    if(dCtx) {
+        const ctx = dCtx.getContext('2d');
+        // කලින් chart එකක් තිබේ නම් එය අයින් කරන්න
+        if(charts.doughnut instanceof Chart) {
+            charts.doughnut.destroy();
+        }
+        
+        charts.doughnut = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['ICT', 'SFT', 'ET'],
+                datasets: [{
+                    data: [ict, sft, et],
+                    backgroundColor: ['#4facfe', '#f6d365', '#667eea'],
+                    borderWidth: 0,
+                    cutout: '75%'
+                }]
+            },
+            options: { 
+                maintainAspectRatio: false, 
+                plugins: { 
+                    legend: { position: 'bottom' } 
+                } 
+            }
+        });
+    }
+
+    // --- 3. Bar Chart (Progress) ---
+    const bCtx = document.getElementById('weeklyBarChart');
+    if(bCtx) {
+        const ctx = bCtx.getContext('2d');
+        // කලින් chart එකක් තිබේ නම් එය අයින් කරන්න
+        if(charts.bar instanceof Chart) {
+            charts.bar.destroy();
+        }
+
+        charts.bar = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Today'],
+                datasets: [
+                    { label: 'ICT', data: [ict], backgroundColor: '#4facfe', borderRadius: 10 },
+                    { label: 'SFT', data: [sft], backgroundColor: '#f6d365', borderRadius: 10 },
+                    { label: 'ET', data: [et], backgroundColor: '#667eea', borderRadius: 10 }
+                ]
+            },
+            options: { 
+                indexAxis: 'y', 
+                maintainAspectRatio: false, 
+                scales: { 
+                    x: { beginAtZero: true, grid: { display: false } }, 
+                    y: { grid: { display: false } } 
+                },
+                plugins: {
+                    legend: { display: true }
+                }
+            }
+        });
+    }
+}
+
+
+
+    function addNote() {
+        const editor = document.getElementById('richNoteInput');
+        const subject = document.getElementById('noteSubject').value;
+        const content = editor.innerHTML.trim();
+        if (content === "" || content === "<br>") return;
+        const notes = JSON.parse(localStorage.getItem('studyNotes')) || [];
+        notes.push({ id: Date.now(), text: content, subject: subject, date: new Date().toLocaleDateString() });
+        localStorage.setItem('studyNotes', JSON.stringify(notes));
+        editor.innerHTML = "";
+        if(document.getElementById('editorWrapper').classList.contains('fullscreen-mode')) toggleFullscreen();
+        renderNotes();
+    }
+
+    function renderNotes() {
+        const container = document.getElementById('notesContainer');
+        if(!container) return;
+        const notes = JSON.parse(localStorage.getItem('studyNotes')) || [];
+        if(document.getElementById('notesCount')) document.getElementById('notesCount').innerText = `${notes.length} Notes`;
+        if (notes.length === 0) {
+            container.innerHTML = `<div class="col-12 text-center text-muted py-5">සටහන් කිසිවක් නැත.</div>`;
+            return;
+        }
+        container.innerHTML = notes.map(n => {
+            let subColor = n.subject === 'ICT' ? '#3b82f6' : (n.subject === 'SFT' ? '#f59e0b' : '#10b981');
+            return `
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100 note-card border-top-0 shadow-sm" style="border-top: 4px solid ${subColor} !important; border-radius: 12px;">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="badge" style="background-color: ${subColor}20; color: ${subColor};">${n.subject}</span>
+                                <div class="d-flex gap-2">
+                                    <button onclick="editNote(${n.id})" class="btn btn-sm btn-light border-0 text-primary"><i class="fa-solid fa-pen-to-square"></i></button>
+                                    <button onclick="deleteNote(${n.id})" class="btn btn-sm btn-light border-0 text-danger"><i class="fa-solid fa-trash-can"></i></button>
+                                </div>
+                            </div>
+                            <div class="note-content">${n.text}</div>
+                        </div>
+                    </div>
+                </div>`;
+        }).reverse().join('');
+    }
+
+    function deleteNote(id) {
+        if(confirm("මකා දමන්නද?")) {
+            let notes = JSON.parse(localStorage.getItem('studyNotes')) || [];
+            localStorage.setItem('studyNotes', JSON.stringify(notes.filter(n => n.id !== id)));
+            renderNotes();
+        }
+    }
+
+    function editNote(id) {
+        let notes = JSON.parse(localStorage.getItem('studyNotes')) || [];
+        const noteToEdit = notes.find(n => n.id === id);
+        if (noteToEdit) {
+            document.getElementById('richNoteInput').innerHTML = noteToEdit.text;
+            document.getElementById('noteSubject').value = noteToEdit.subject;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+ let currentMonth = new Date().getMonth();
+let currentYear = new Date().getFullYear();
+
+// මාසය ඉදිරියට ගෙන යාම
+function nextMonth() {
+    currentMonth++;
+    if (currentMonth > 11) {
+        currentMonth = 0;
+        currentYear++;
+    }
+    renderCalendar();
+}
+
+// මාසය ආපසු ගෙන යාම
+function prevMonth() {
+    currentMonth--;
+    if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+    }
+    renderCalendar();
+}
+
+// දින දර්ශනය ඇඳීම (4x4 ලොකු Grid එක)
+function renderCalendar() {
+    const grid = document.getElementById('calendarGrid');
+    const monthDisplay = document.getElementById('monthDisplay');
+    if (!grid) return;
+
+    grid.innerHTML = '';
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const logs = JSON.parse(localStorage.getItem('studyLogs')) || [];
+
+    // මාසය සහ අවුරුද්ද පෙන්වීම (උදා: May 2026)
+    monthDisplay.innerText = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(new Date(currentYear, currentMonth));
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const isToday = new Date().toLocaleDateString('en-CA') === dateStr ? 'today-highlight' : '';
+        
+        // එදා දවසට අදාළ දත්ත ටික වෙන් කර ගැනීම
+        const dayLogs = logs.filter(l => l.date === dateStr);
+        
+        // --- අලුත් කොටස: එදා දවසේ මුළු පැය ගාණ එකතු කිරීම ---
+        let totalHours = 0;
+        dayLogs.forEach(log => {
+            totalHours += parseFloat(log.hours || 0);
+        });
+        // --------------------------------------------------
+
+        let taskHtml = '';
+        dayLogs.forEach((log, index) => {
+            taskHtml += `
+                <div class="task-item-big d-flex justify-content-between align-items-center">
+                    <span>🔹 ${log.task}</span>
+                    <i class="fa-solid fa-trash-can remove-btn-mini" onclick="deleteTask('${dateStr}', ${index})"></i>
+                </div>`;
+        });
+
+        // පැය ගාණ තිබේ නම් පමණක් Badge එක පෙන්වන්න
+        const hoursBadge = totalHours > 0 ? `<span class="badge bg-primary text-white ms-1" style="font-size:10px;">${totalHours.toFixed(1)}h</span>` : '';
+
+        grid.innerHTML += `
+            <div class="calendar-day-big ${isToday}">
+                <div class="day-header-big">
+                    <div class="date-circle">${day}</div>
+                    <div class="header-badges">
+                        <span class="badge bg-light text-dark" style="font-size:10px;">${dayLogs.length} Tasks</span>
+                        ${hoursBadge}
+                    </div>
+                </div>
+                <div class="task-list-big">
+                    ${taskHtml || '<span class="text-muted" style="font-size:10px;">No records</span>'}
+                </div>
+            </div>`;
+    }
+}
+function deleteTask(dateStr, taskIndex) {
+    let logs = JSON.parse(localStorage.getItem('studyLogs')) || [];
+    
+    // එම දිනයට අදාළ logs පෙරා ගන්න
+    let dayLogs = logs.filter(l => l.date === dateStr);
+    
+    // අදාළ index එකේ තියෙන task එක ඉවත් කරන්න
+    const taskToRemove = dayLogs[taskIndex];
+    
+    // මුළු logs ලැයිස්තුවෙන් එම විශේෂිත task එක පමණක් අයින් කරන්න
+    const finalLogs = logs.filter(log => log !== taskToRemove);
+
+    localStorage.setItem('studyLogs', JSON.stringify(finalLogs));
+    renderCalendar(); // වහාම Calendar එක Update කරන්න
+}
+// ඕනෑම දවසක් ක්ලික් කරලා Target එකක් දාන්න පුළුවන් වෙන්න මේක හැදුවා
+function setGoalForDate(date) {
+    const goalVal = prompt(`${date} සඳහා ඉලක්කය (පැය):`, "0");
+    if(goalVal !== null) {
+        localStorage.setItem(`goal_${date}`, goalVal);
+        renderCalendar();
+    }
+}
+
+// අද දවසේ Target එක Set කරන පරණ function එකත් update කළා
+function setGoal() {
+    const goalVal = document.getElementById('dailyGoalInput').value;
+    const today = new Date().toLocaleDateString('en-CA'); 
+    
+    if(goalVal !== "") {
+        localStorage.setItem(`goal_${today}`, goalVal);
+        alert(`ඉලක්කය පැය ${goalVal} ලෙස සකස් කළා!`);
+        renderCalendar();
+    }
+}
+
+function getProgressForDate(dateStr) {
+    let logs = JSON.parse(localStorage.getItem('studyLogs')) || [];
+    
+    return logs
+        .filter(log => {
+            // log එකේ තියෙන දිනය YYYY-MM-DD විදිහට සසඳන්න
+            let logDate = new Date(log.date).toLocaleDateString('en-CA');
+            return logDate === dateStr;
+        })
+        .reduce((sum, log) => {
+            // duration නෙවෙයි hours පාවිච්චි කරන්න!
+            return sum + parseFloat(log.hours || 0);
+        }, 0);
+}
+function renderRecentSessions() {
+    const sessionList = document.getElementById('recentSessionsList');
+    if (!sessionList) return;
+
+    let logs = JSON.parse(localStorage.getItem('studyLogs')) || [];
+    sessionList.innerHTML = '';
+
+    logs.slice(0, 5).forEach(log => {
+        // Status එක අනුව Icon එක සහ පාට තීරණය කිරීම
+        let statusUI = '';
+        
+        if (log.status === 'Completed') {
+            // සම්පූර්ණ නම් කොළ පාට ටික් එක
+            statusUI = `
+                <div class="d-flex align-items-center text-success fw-bold" style="font-size: 13px;">
+                    <i class="fa-solid fa-circle-check me-1"></i> Completed
+                </div>`;
+        } else {
+            // අසම්පූර්ණ නම් රතු පාට කොටුව (Red Square)
+            statusUI = `
+                <div class="d-flex align-items-center text-danger fw-bold" style="font-size: 13px;">
+                    <i class="fa-solid fa-square me-1"></i> Incomplete
+                </div>`;
+        }
+
+        sessionList.innerHTML += `
+            <div class="session-item d-flex justify-content-between align-items-center p-3 mb-2 rounded-3 shadow-sm" style="background: #fff; border-left: 5px solid ${log.status === 'Completed' ? '#2ecc71' : '#e74c3c'};">
+                <div>
+                    <h6 class="m-0 fw-extrabold text-dark">${log.task}</h6>
+                    <small class="text-muted">${log.hours}h • ${log.date} at ${log.timestamp}</small>
+                </div>
+                <div class="status-box">
+                    ${statusUI}
+                </div>
+            </div>`;
+    });
+}
+function showDayDetails(dateStr) {
+    const modal = document.getElementById('dayDetailsModal');
+    const modalDate = document.getElementById('modalDate');
+    const modalTaskBody = document.getElementById('modalTaskBody');
+    
+    // දින දර්ශනයේ format එක ලස්සන කරමු
+    modalDate.innerText = new Date(dateStr).toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+    
+    let logs = JSON.parse(localStorage.getItem('studyLogs')) || [];
+    // Date එක හරියටම ගැලපෙනවද බලන්න
+    let dayLogs = logs.filter(log => log.date === dateStr); 
+    
+    modalTaskBody.innerHTML = ""; 
+
+    if (dayLogs.length === 0) {
+        modalTaskBody.innerHTML = `
+            <div class="text-center py-3">
+                <p class="text-muted mb-3">එදා වැඩ මුකුත් කරලා නැහැ මචෝ! 😴</p>
+                <button class="btn btn-sm btn-outline-primary" onclick="setGoalForDate('${dateStr}')">Set Goal</button>
+            </div>`;
+    } else {
+        dayLogs.forEach(log => {
+            modalTaskBody.innerHTML += `
+                <div class="modal-task-item shadow-sm mb-2" style="border-left: 4px solid var(--primary-color); background: #f8f9fa; padding: 10px; border-radius: 10px;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge bg-primary">${log.subject}</span>
+                        <span class="fw-bold text-dark">${log.hours || log.duration || 0}h</span>
+                    </div>
+                    <div class="mt-1 small text-secondary">${log.task}</div>
+                </div>`;
+        });
+    }
+
+    modal.style.display = 'flex'; // Popup එක පෙන්වන්න
+}
+
+// 2. Modal එක වහන Function එක
+function closeModal() {
+    document.getElementById('dayDetailsModal').style.display = 'none';
+}
+function saveLog(taskName, durationMs, targetMs) {
+    let logs = JSON.parse(localStorage.getItem('studyLogs')) || [];
+    
+    // මිලි තත්පර 1000ක (තත්පරයක) වෙනසක් තිබුණත් එය Completed ලෙස සලකමු
+    const isCompleted = durationMs >= (targetMs - 1000); 
+
+    const newLog = {
+        id: Date.now(),
+        date: new Date().toLocaleDateString('en-CA'),
+        task: taskName,
+        hours: (durationMs / (1000 * 60 * 60)).toFixed(2),
+        status: isCompleted ? 'Completed' : 'Incomplete', // මෙතන 'Incomplete' ලෙස සේව් වේ
+        timestamp: new Date().toLocaleTimeString()
+    };
+
+    logs.unshift(newLog);
+    localStorage.setItem('studyLogs', JSON.stringify(logs));
+    renderRecentSessions();
+}
+window.addEventListener('DOMContentLoaded', () => {
+    // තත්පරයකින් 1/10 කට පස්සේ පේජ් එක මාරු කරන්න 
+    // (එතකොට පරණ script එකෙන් Focus එක පෙන්වන්න හදන එක bypass වෙනවා)
+    setTimeout(() => {
+        if (typeof showPage === 'function') {
+            showPage('inputPage');
+        } else {
+            // function එක නැත්නම් කෙලින්ම IDs හරහා වැඩේ කරනවා
+            document.querySelectorAll('.page-section').forEach(p => p.style.display = 'none');
+            document.getElementById('inputPage').style.display = 'block';
+        }
+    }, 100);
+});
+
+
+// --- 1. පේජ් එක ලෝඩ් වෙද්දී සිද්ධ විය යුතු දේවල් ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Syllabus පේජ් එකේ ඉන්නවා නම් විතරක් ප්ලෑන් ටික පෙන්වන්න
+    const container = document.getElementById('manualSyllabusList');
+    if (container && typeof renderManualSyllabus === "function") {
+        renderManualSyllabus();
+    }
+
+    // වැදගත්: පේජ් එක බලෙන්ම මාරු කරන එක කරන්න ඕනේ "Syllabus Plan" එක ක්ලික් කළොත් විතරයි
+    // එහෙම නැතුව හැමතිස්සෙම 100ms වලින් මාරු වෙන්න ගියොත් ඔයාට වෙන පේජ් එකක ඉන්න ලැබෙන්නේ නැහැ.
+});
+function showPage(pageId, element) {
+    // 1. හැම section එකක්ම හංගන්න
+    const sections = document.querySelectorAll('.page-section');
+    sections.forEach(section => {
+        section.style.display = 'none';
+        section.classList.remove('active');
+    });
+
+    // 2. අදාළ පේජ් එක විතරක් පෙන්වන්න
+    const targetPage = document.getElementById(pageId);
+    if (targetPage) {
+        targetPage.style.display = 'block';
+        targetPage.classList.add('active');
+    }
+
+    // 3. Syllabus Page එක නම් ලැයිස්තුව refresh කරන්න
+    if (pageId === 'syllabusPage') {
+        renderManualSyllabus();
+    }
+
+    // 4. Sidebar එකේ active පාට මාරු කරන්න
+    const navLinks = document.querySelectorAll('.nav-link');
+    navLinks.forEach(link => link.classList.remove('active'));
+    if (element) element.classList.add('active');
+}
+// --- 2. අලුත් ප්ලෑන් එකක් ඇතුළත් කිරීම ---
+function addNewManualPlan() {
+    const title = document.getElementById('subjectTitle').value;
+    const tasksRaw = document.getElementById('subTasks').value;
+    const subjectSelect = document.getElementById('subjectType');
+    const subjectType = subjectSelect.value; 
+
+    if (!title || !tasksRaw) {
+        alert("කරුණාකර විෂය සහ ලිස්ට් එක ඇතුළත් කරන්න!");
+        return;
+    }
+
+    const lines = tasksRaw.split('\n').filter(t => t.trim() !== "");
+    let structure = [];
+    let currentHeading = "General Tasks";
+    let currentTasks = [];
+
+    lines.forEach(line => {
+        if (line.trim().startsWith('#')) {
+            if (currentTasks.length > 0) {
+                structure.push({ heading: currentHeading, tasks: currentTasks });
+            }
+            currentHeading = line.replace('#', '').trim();
+            currentTasks = [];
+        } else {
+            currentTasks.push(line.trim());
+        }
+    });
+
+    if (currentTasks.length > 0) {
+        structure.push({ heading: currentHeading, tasks: currentTasks });
+    }
+
+    const newPlan = {
+        id: "plan-" + Date.now(),
+        title: title,
+        subjectType: subjectType,
+        structure: structure
+    };
+
+    let manualPlans = JSON.parse(localStorage.getItem('manualStudyPlans')) || [];
+    manualPlans.push(newPlan);
+    localStorage.setItem('manualStudyPlans', JSON.stringify(manualPlans));
+
+    document.getElementById('subjectTitle').value = '';
+    document.getElementById('subTasks').value = '';
+    
+    renderManualSyllabus();
+}
+
+function renderManualSyllabus() {
+    const container = document.getElementById('manualSyllabusList');
+    if (!container) return; 
+
+    const plans = JSON.parse(localStorage.getItem('manualStudyPlans')) || [];
+    const progress = JSON.parse(localStorage.getItem('osProgress')) || {}; 
+
+    const subjectColors = {
+        'ICT': '#4dabff',
+        'SFT': '#FF0000',
+        'ET': '#6c5ce7'
+    };
+
+    let html = '';
+    plans.forEach(plan => {
+        const themeColor = subjectColors[plan.subjectType] || '#4dabff';
+        
+        let total = 0, done = 0;
+        plan.structure.forEach(s => {
+            s.tasks.forEach((t, i) => {
+                total++;
+                if(progress[`${plan.id}-${s.heading}-${i}`]) done++;
+            });
+        });
+        const percent = total > 0 ? (done / total) * 100 : 0;
+
+        html += `
+            <div class="glass-card p-3 mb-4 shadow-sm" style="background: #ffffff; border-radius: 15px; border-left: 8px solid ${themeColor};">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 style="color: #000; font-weight: 800; margin: 0; font-size: 1.2rem;">
+                        ${plan.title} 
+                        <span class="badge" style="background:${themeColor}; font-size:10px;">${plan.subjectType}</span>
+                    </h5>
+                    <button class="btn btn-sm text-danger" onclick="deleteManualPlan('${plan.id}')"><i class="fa-solid fa-trash"></i></button>
+                </div>
+                
+                <div class="progress mb-3" style="height: 12px; background: #e9ecef; border-radius: 5px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         style="width: ${percent}%; background-color: ${themeColor}; transition: 0.5s;">
+                         ${Math.round(percent)}%
+                    </div>
+                </div>`;
+            
+        plan.structure.forEach((section, sIndex) => {
+            // Topic එකේ තියෙන ඔක්කොම ටික් වෙලාද කියලා බලනවා (Main Checkbox එකේ status එකට)
+            const allTasksInSet = section.tasks.every((_, i) => progress[`${plan.id}-${section.heading}-${i}`]);
+            const sectionChecked = allTasksInSet ? 'checked' : '';
+
+            html += `
+                <div class="d-flex align-items-center mt-4 mb-2">
+                    <input type="checkbox" class="form-check-input me-2" ${sectionChecked}
+                           style="border: 2px solid ${themeColor}; width: 22px; height: 22px; cursor: pointer;" 
+                           onclick="toggleSection('${plan.id}', '${section.heading}', ${section.tasks.length}, this.checked)">
+                    <h6 style="color: ${themeColor}; margin: 0; font-size: 1.4rem; font-weight: 900;">${section.heading}</h6>
+                </div>`;
+
+            section.tasks.forEach((task, index) => {
+                const taskId = `${plan.id}-${section.heading}-${index}`;
+                const isChecked = progress[taskId] ? 'checked' : '';
+                html += `
+                    <div class="form-check p-2 mb-1 shadow-sm d-flex align-items-center border-start border-3" 
+                         style="background-color: #ffffff; border-radius: 8px; border-color: ${themeColor} !important;">
+                        <input class="form-check-input ms-2 me-3" 
+                               style="border: 2px solid #000; width: 18px; height: 18px;"
+                               type="checkbox" id="${taskId}" ${isChecked} 
+                               onchange="saveProgress('${taskId}', this.checked)">
+                        <label class="form-check-label flex-grow-1" style="font-size: 15px; color: #000; font-weight: 800; cursor: pointer;" for="${taskId}">
+                            ${task}
+                        </label>
+                    </div>`;
+            });
+        });
+        html += `</div>`;
+    });
+    container.innerHTML = html;
+}
+
+// මෙන්න Select All / Unselect All වෙන function එක
+function toggleSection(planId, sectionHeading, taskCount, isChecked) {
+    const progress = JSON.parse(localStorage.getItem('osProgress')) || {};
+
+    for (let i = 0; i < taskCount; i++) {
+        const taskId = `${planId}-${sectionHeading}-${i}`;
+        if (isChecked) {
+            progress[taskId] = true;
+        } else {
+            delete progress[taskId];
+        }
+    }
+
+    localStorage.setItem('osProgress', JSON.stringify(progress));
+    renderManualSyllabus(); // UI එක refresh කරනවා
+}
+
+function saveProgress(taskId, isChecked, shouldRender = true) {
+    let progress = JSON.parse(localStorage.getItem('osProgress')) || {};
+    progress[taskId] = isChecked;
+    localStorage.setItem('osProgress', JSON.stringify(progress));
+    
+    if (shouldRender) {
+        renderManualSyllabus();
+        if (typeof renderSyllabus === "function") renderSyllabus();
+    }
+}
+
+function deleteManualPlan(id) {
+    if(confirm("මෙම ප්ලෑන් එක මකා දමන්නද?")) {
+        let plans = JSON.parse(localStorage.getItem('manualStudyPlans')) || [];
+        plans = plans.filter(p => p.id !== id);
+        localStorage.setItem('manualStudyPlans', JSON.stringify(plans));
+        renderManualSyllabus();
+    }
+}
+window.addEventListener('scroll', function() {
+    const scrollTopBtn = document.getElementById("scrollTopBtn");
+    
+    // පේජ් එකෙන් පික්සල් 200ක් පල්ලෙහාට ආවම විතරක් Up Arrow එක පෙන්වන්න
+    if (window.pageYOffset > 200) {
+        scrollTopBtn.classList.add("show");
+    } else {
+        scrollTopBtn.classList.remove("show");
+    }
+});
+
+// උඩටම යන්න
+function scrollToTop() {
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+}
+
+// පල්ලෙහාටම යන්න
+function scrollToBottom() {
+    window.scrollTo({
+        top: document.documentElement.scrollHeight,
+        behavior: 'smooth'
+    });
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<div id="dayDetailsModal" class="day-modal">
+        <div class="day-modal-content glass-card shadow-lg animate__animated animate__zoomIn">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold m-0 text-primary" id="modalDate">April 26, 2026</h5>
+                <button onclick="closeModal()" class="btn-close"></button>
+            </div>
+            <div id="modalTaskBody"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // මෙතන තමයි කලින් දුන්න JS ටික තියෙන්න ඕනේ
+    </script>
+    
+</body>
+</html>
+<footer class="footer mt-auto py-3">
+    <div class="container text-center">
+        <div class="glass-footer p-3 rounded-pill shadow-sm">
+            <p class="mb-0 text-muted">
+                <span class="fw-bold text-primary">© 2026 Study Tracker</span> | 
+                <i class="fa-solid fa-code me-1 text-danger"></i> Developed by 
+                <span class="developer-name">V.Vidushan</span>
+            </p>
+            <div class="social-links mt-2">
+                <small>Matara, Sri Lanka | A/L Student</small>
+            </div>
+        </div>
+    </div>
+</footer>
+<!-- Scroll Buttons -->
+<div class="scroll-buttons">
+    <button onclick="scrollToTop()" id="scrollTopBtn" title="Go to top">
+        <i class="fa-solid fa-arrow-up"></i>
+    </button>
+    <button onclick="scrollToBottom()" id="scrollBottomBtn" title="Go to bottom">
+        <i class="fa-solid fa-arrow-down"></i>
+    </button>
+</div>
+</body>
+</html>
